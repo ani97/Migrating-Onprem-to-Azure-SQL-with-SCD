@@ -64,12 +64,6 @@ project1/
 
 ---
 
-## 🔑 SQL Schema (Azure SQL Database)
-
-_Similar tables exist for customers (SCD 1), loans (SCD 1), loan_payments (SCD 2), and transactions (SCD 2)._
-
----
-
 ## ⚙️ Key Logic Implementations
 
 ### ✅ **Incremental File Processing**
