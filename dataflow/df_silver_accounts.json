@@ -1,0 +1,111 @@
+{
+	"name": "df_silver_accounts",
+	"properties": {
+		"folder": {
+			"name": "Silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Accounts",
+						"type": "DatasetReference"
+					},
+					"name": "Accounts"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "Accounts_no_nulls",
+						"type": "DatasetReference"
+					},
+					"name": "accountsCleaned"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureDataLakeStorage1",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "aggregate1"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "split1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          account_id as integer,",
+				"          customer_id as integer,",
+				"          account_type as string,",
+				"          balance as double",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     wildcardPaths:['bronze/acc*.csv']) ~> Accounts",
+				"Accounts aggregate(groupBy(account_id,",
+				"          customer_id,",
+				"          account_type,",
+				"          balance),",
+				"     cnt_duplicate = count(account_id)) ~> aggregate1",
+				"aggregate1 select(mapColumn(",
+				"          account_id,",
+				"          customer_id,",
+				"          account_type,",
+				"          balance",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"select1 split(!isNull(account_id) && trim(toString(account_id)) != '' &&\r",
+				"!isNull(customer_id) && trim(toString(customer_id)) != '' &&\r",
+				"!isNull(account_type) && trim(account_type) != '' &&\r",
+				"!isNull(balance) && trim(toString(balance)) != '',",
+				"     isNull(account_id) || trim(toString(account_id)) == '' ||\r",
+				"isNull(customer_id) || trim(toString(customer_id)) == '' ||\r",
+				"isNull(trim(account_type)) || trim(account_type) == '' ||\r",
+				"isNull(balance) || trim(toString(balance)) == '',",
+				"     disjoint: false) ~> split1@(cleanrecords, dirtyrecords)",
+				"split1@cleanrecords sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          account_id,",
+				"          customer_id,",
+				"          account_type,",
+				"          balance",
+				"     )) ~> accountsCleaned",
+				"split1@dirtyrecords sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delimited',",
+				"     fileSystem: 'project1',",
+				"     folderPath: 'reject',",
+				"     columnDelimiter: ',',",
+				"     escapeChar: '\\\\',",
+				"     quoteChar: '\\\"',",
+				"     columnNamesAsHeader: false,",
+				"     partitionFileNames:['accounts.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink1"
+			]
+		}
+	}
+}

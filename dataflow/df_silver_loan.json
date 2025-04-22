@@ -1,0 +1,109 @@
+{
+	"name": "df_silver_loan",
+	"properties": {
+		"folder": {
+			"name": "Silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Loans",
+						"type": "DatasetReference"
+					},
+					"name": "Loans"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "loan",
+						"type": "DatasetReference"
+					},
+					"name": "loan"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureDataLakeStorage1",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "aggregate4"
+				},
+				{
+					"name": "select4"
+				},
+				{
+					"name": "split1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          loan_id as short,",
+				"          customer_id as short,",
+				"          loan_amount as double,",
+				"          interest_rate as double,",
+				"          loan_term as short",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     wildcardPaths:['bronze/loans*.csv']) ~> Loans",
+				"Loans aggregate(groupBy(loan_id,",
+				"          customer_id,",
+				"          loan_amount,",
+				"          interest_rate,",
+				"          loan_term),",
+				"     remove_duplicates = count(loan_id)) ~> aggregate4",
+				"aggregate4 select(mapColumn(",
+				"          loan_id,",
+				"          customer_id,",
+				"          loan_amount,",
+				"          interest_rate,",
+				"          loan_term",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select4",
+				"select4 split(!isNull(loan_id) && toString(loan_id) != '' && !isNull(customer_id) && toString(customer_id) != '' && !isNull(loan_amount) && toString(loan_amount) != '' && !isNull(interest_rate) && toString(interest_rate) != '' && !isNull(loan_term) && toString(loan_term) != '',",
+				"     isNull(loan_id) || toString(loan_id) == '' || isNull(customer_id) || toString(customer_id) == '' || isNull(loan_amount) || toString(loan_amount) == '' || isNull(interest_rate) || toString(interest_rate) == '' || isNull(loan_term) || toString(loan_term) == '',",
+				"     disjoint: false) ~> split1@(cleanrecord, dirtyrecord)",
+				"split1@cleanrecord sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          loan_id,",
+				"          customer_id,",
+				"          loan_amount,",
+				"          interest_rate,",
+				"          loan_term",
+				"     )) ~> loan",
+				"split1@dirtyrecord sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delimited',",
+				"     fileSystem: 'project1',",
+				"     folderPath: 'reject',",
+				"     columnDelimiter: ',',",
+				"     escapeChar: '\\\\',",
+				"     quoteChar: '\\\"',",
+				"     columnNamesAsHeader: false,",
+				"     partitionFileNames:['loans.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink1"
+			]
+		}
+	}
+}

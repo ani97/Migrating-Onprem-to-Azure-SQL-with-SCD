@@ -1,0 +1,45 @@
+{
+	"name": "transaction_transform",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorage1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "silver/transactions",
+				"fileSystem": "project1"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "transaction_id",
+				"type": "String"
+			},
+			{
+				"name": "account_id",
+				"type": "String"
+			},
+			{
+				"name": "transaction_date",
+				"type": "String"
+			},
+			{
+				"name": "transaction_amount",
+				"type": "String"
+			},
+			{
+				"name": "transaction_type",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

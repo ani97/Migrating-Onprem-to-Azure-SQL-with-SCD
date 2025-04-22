@@ -1,0 +1,156 @@
+{
+	"name": "df_gold_layer_accounts_SCD2",
+	"properties": {
+		"folder": {
+			"name": "Gold"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "accoungold",
+						"type": "DatasetReference"
+					},
+					"name": "accountsTransform"
+				},
+				{
+					"dataset": {
+						"referenceName": "accounts_gold",
+						"type": "DatasetReference"
+					},
+					"name": "accountSql",
+					"description": "Select account_id,hashkey from accounts\nwhere isActive=1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "accounts_gold",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"dataset": {
+						"referenceName": "accounts_gold",
+						"type": "DatasetReference"
+					},
+					"name": "sink2"
+				}
+			],
+			"transformations": [
+				{
+					"name": "select1"
+				},
+				{
+					"name": "generathashkey"
+				},
+				{
+					"name": "lookup1"
+				},
+				{
+					"name": "split1"
+				},
+				{
+					"name": "updatecolumns"
+				},
+				{
+					"name": "alterRow1"
+				},
+				{
+					"name": "union1"
+				},
+				{
+					"name": "insertion"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          account_id as short,",
+				"          customer_id as short,",
+				"          account_type as string,",
+				"          balance as double",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     purgeFiles: true,",
+				"     wildcardPaths:['silver/accounts/*.csv']) ~> accountsTransform",
+				"source(output(",
+				"          account_id as integer,",
+				"          hashkey as long",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     query: 'Select account_id,hashkey from accounts\\nwhere isActive=1',",
+				"     format: 'query') ~> accountSql",
+				"accountsTransform select(mapColumn(",
+				"          each(match(1==1),",
+				"               concat('src_',$$) = $$)",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"select1 derive(src_hashkey = crc32(concatWS('|', toString(src_account_id),toString(src_customer_id),src_account_type,toString(src_balance)))) ~> generathashkey",
+				"generathashkey, accountSql lookup(src_account_id == account_id,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookup1",
+				"lookup1 split(isNull(account_id),",
+				"     src_account_id==account_id&&src_hashkey!=hashkey,",
+				"     disjoint: false) ~> split1@(insertAccounts, updateAccounts)",
+				"split1@updateAccounts derive(src_updatedby = 'Pipeline-updated',",
+				"          src_updateddate = currentTimestamp(),",
+				"          src_isActive = 0) ~> updatecolumns",
+				"updatecolumns alterRow(updateIf(1==1)) ~> alterRow1",
+				"split1@insertAccounts, split1@updateAccounts union(byName: true)~> union1",
+				"union1 derive(src_createdby = 'Pipeline',",
+				"          src_createddate = currentTimestamp(),",
+				"          src_updatedby = 'Pipeline',",
+				"          src_updateddate = currentTimestamp(),",
+				"          src_isActive = 1) ~> insertion",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['account_id','hashkey'],",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          account_id,",
+				"          hashkey,",
+				"          updatedby = src_updatedby,",
+				"          updateddate = src_updateddate,",
+				"          isActive = src_isActive",
+				"     )) ~> sink1",
+				"insertion sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          account_id = src_account_id,",
+				"          customer_id = src_customer_id,",
+				"          account_type = src_account_type,",
+				"          balance = src_balance,",
+				"          hashkey = src_hashkey,",
+				"          createdby = src_createdby,",
+				"          createddate = src_createddate,",
+				"          updatedby = src_updatedby,",
+				"          updateddate = src_updateddate,",
+				"          isActive = src_isActive",
+				"     )) ~> sink2"
+			]
+		}
+	}
+}

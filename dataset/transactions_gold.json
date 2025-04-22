@@ -1,0 +1,71 @@
+{
+	"name": "transactions_gold",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "transaction_id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "account_id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "transaction_date",
+				"type": "date"
+			},
+			{
+				"name": "transaction_amount",
+				"type": "float",
+				"precision": 15
+			},
+			{
+				"name": "transaction_type",
+				"type": "varchar"
+			},
+			{
+				"name": "hashkey",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "createdby",
+				"type": "varchar"
+			},
+			{
+				"name": "createddate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "updatedby",
+				"type": "varchar"
+			},
+			{
+				"name": "updateddate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "isActive",
+				"type": "int",
+				"precision": 10
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "transactions"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

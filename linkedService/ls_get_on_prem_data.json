@@ -1,0 +1,24 @@
+{
+	"name": "ls_get_on_prem_data",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "FileServer",
+		"typeProperties": {
+			"host": "D:\\Bootcamp\\Project 1\\Client_Data",
+			"userId": "aniket",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "AzureKeyVault1",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "onprempassword"
+			}
+		},
+		"connectVia": {
+			"referenceName": "clientdata",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

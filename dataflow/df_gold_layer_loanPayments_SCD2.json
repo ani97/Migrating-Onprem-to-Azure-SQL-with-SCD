@@ -1,0 +1,179 @@
+{
+	"name": "df_gold_layer_loanPayments_SCD2",
+	"properties": {
+		"folder": {
+			"name": "Gold"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "loanpayment",
+						"type": "DatasetReference"
+					},
+					"name": "loanPayments"
+				},
+				{
+					"dataset": {
+						"referenceName": "loanpayments_gold",
+						"type": "DatasetReference"
+					},
+					"name": "loanpaymentsql"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "loanpayments_gold",
+						"type": "DatasetReference"
+					},
+					"name": "sink5"
+				},
+				{
+					"dataset": {
+						"referenceName": "loanpayments_gold",
+						"type": "DatasetReference"
+					},
+					"name": "sink6"
+				}
+			],
+			"transformations": [
+				{
+					"name": "select3"
+				},
+				{
+					"name": "derivedColumn4"
+				},
+				{
+					"name": "lookup3"
+				},
+				{
+					"name": "split3"
+				},
+				{
+					"name": "updatevalues"
+				},
+				{
+					"name": "alterRow3"
+				},
+				{
+					"name": "union2"
+				},
+				{
+					"name": "derivedColumn5"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          payment_id as short,",
+				"          loan_id as short,",
+				"          payment_date as date,",
+				"          payment_amount as double",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     purgeFiles: true,",
+				"     wildcardPaths:['silver/loan_payments/*.csv']) ~> loanPayments",
+				"source(output(",
+				"          payment_id as integer,",
+				"          hashkey as long",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     query: 'Select payment_id,hashkey from loan_payments where isActive=1',",
+				"     format: 'query') ~> loanpaymentsql",
+				"loanPayments select(mapColumn(",
+				"          each(match(1==1),",
+				"               concat('src_',$$) = $$)",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select3",
+				"select3 derive(src_hashkey = crc32(concatWS('|', toString(src_payment_id),toString(src_loan_id),toString(src_payment_date),toString(src_payment_amount)))) ~> derivedColumn4",
+				"derivedColumn4, loanpaymentsql lookup(src_payment_id == payment_id,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookup3",
+				"lookup3 split(isNull(payment_id),",
+				"     src_payment_id==payment_id&&src_hashkey!=hashkey,",
+				"     disjoint: false) ~> split3@(insertloanpayment, updateloanpayment)",
+				"split3@updateloanpayment derive(src_updatedby = 'Pipeline-Updated',",
+				"          src_updateddate = currentTimestamp(),",
+				"          src_isActive = 0) ~> updatevalues",
+				"updatevalues alterRow(updateIf(1==1)) ~> alterRow3",
+				"split3@insertloanpayment, split3@updateloanpayment union(byName: true)~> union2",
+				"union2 derive(src_createdby = 'Pipeline',",
+				"          src_createddate = currentTimestamp(),",
+				"          src_updatedby = 'Pipeline',",
+				"          src_updateddate = currentTimestamp(),",
+				"          src_isActive = 1) ~> derivedColumn5",
+				"alterRow3 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          payment_id as integer,",
+				"          loan_id as integer,",
+				"          payment_date as date,",
+				"          payment_amount as double,",
+				"          hashkey as long,",
+				"          createdby as string,",
+				"          createddate as timestamp,",
+				"          updatedby as string,",
+				"          updateddate as timestamp,",
+				"          isActive as integer",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['payment_id','hashkey'],",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          payment_id,",
+				"          hashkey,",
+				"          updatedby = src_updatedby,",
+				"          updateddate = src_updateddate,",
+				"          isActive = src_isActive",
+				"     )) ~> sink5",
+				"derivedColumn5 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          payment_id as integer,",
+				"          loan_id as integer,",
+				"          payment_date as date,",
+				"          payment_amount as double,",
+				"          hashkey as long,",
+				"          createdby as string,",
+				"          createddate as timestamp,",
+				"          updatedby as string,",
+				"          updateddate as timestamp,",
+				"          isActive as integer",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          payment_id = src_payment_id,",
+				"          loan_id = src_loan_id,",
+				"          payment_date = src_payment_date,",
+				"          payment_amount = src_payment_amount,",
+				"          hashkey = src_hashkey,",
+				"          createdby = src_createdby,",
+				"          createddate = src_createddate,",
+				"          updatedby = src_updatedby,",
+				"          updateddate = src_updateddate,",
+				"          isActive = src_isActive",
+				"     )) ~> sink6"
+			]
+		}
+	}
+}

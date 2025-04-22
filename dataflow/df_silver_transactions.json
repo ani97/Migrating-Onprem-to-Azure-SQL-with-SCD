@@ -1,0 +1,109 @@
+{
+	"name": "df_silver_transactions",
+	"properties": {
+		"folder": {
+			"name": "Silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Transactions",
+						"type": "DatasetReference"
+					},
+					"name": "Transactions"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "Transaction",
+						"type": "DatasetReference"
+					},
+					"name": "Transaction"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureDataLakeStorage1",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "aggregate5"
+				},
+				{
+					"name": "select5"
+				},
+				{
+					"name": "split1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          transaction_id as short,",
+				"          account_id as short,",
+				"          transaction_date as date,",
+				"          transaction_amount as double,",
+				"          transaction_type as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     wildcardPaths:['bronze/trans*.csv']) ~> Transactions",
+				"Transactions aggregate(groupBy(transaction_type,",
+				"          account_id,",
+				"          transaction_date,",
+				"          transaction_amount,",
+				"          transaction_id),",
+				"     deduplicates = count(transaction_id)) ~> aggregate5",
+				"aggregate5 select(mapColumn(",
+				"          transaction_type,",
+				"          account_id,",
+				"          transaction_date,",
+				"          transaction_amount,",
+				"          transaction_id",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select5",
+				"select5 split(!isNull(transaction_id) && toString(transaction_id) != '' && !isNull(account_id) && toString(account_id) != '' && !isNull(transaction_date) && toString(transaction_date) != '' && !isNull(transaction_amount) && toString(transaction_amount) != '' && !isNull(transaction_type) && trim(transaction_type) != '',",
+				"     isNull(transaction_id) || toString(transaction_id) == '' || isNull(account_id) || toString(account_id) == '' || isNull(transaction_date) || toString(transaction_date) == '' || isNull(transaction_amount) || toString(transaction_amount) == '' || isNull(transaction_type) || trim(transaction_type) == '',",
+				"     disjoint: false) ~> split1@(cleanrecords, dirtyrecords)",
+				"split1@cleanrecords sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          transaction_type,",
+				"          account_id,",
+				"          transaction_date,",
+				"          transaction_amount,",
+				"          transaction_id",
+				"     )) ~> Transaction",
+				"split1@dirtyrecords sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delimited',",
+				"     fileSystem: 'project1',",
+				"     folderPath: 'reject',",
+				"     columnDelimiter: ',',",
+				"     escapeChar: '\\\\',",
+				"     quoteChar: '\\\"',",
+				"     columnNamesAsHeader: false,",
+				"     partitionFileNames:['transactions.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink1"
+			]
+		}
+	}
+}

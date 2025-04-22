@@ -1,0 +1,6 @@
+{
+	"name": "clientdata",
+	"properties": {
+		"type": "SelfHosted"
+	}
+}

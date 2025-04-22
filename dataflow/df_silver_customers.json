@@ -1,0 +1,117 @@
+{
+	"name": "df_silver_customers",
+	"properties": {
+		"folder": {
+			"name": "Silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Customers",
+						"type": "DatasetReference"
+					},
+					"name": "Customers"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "customerCleaned",
+						"type": "DatasetReference"
+					},
+					"name": "customerCleaned"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureDataLakeStorage1",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "aggregate2"
+				},
+				{
+					"name": "select2"
+				},
+				{
+					"name": "split1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          customer_id as short,",
+				"          first_name as string,",
+				"          last_name as string,",
+				"          address as string,",
+				"          city as string,",
+				"          state as string,",
+				"          zip as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     wildcardPaths:['bronze/cust*.csv']) ~> Customers",
+				"Customers aggregate(groupBy(first_name,",
+				"          last_name,",
+				"          customer_id,",
+				"          address,",
+				"          city,",
+				"          state,",
+				"          zip),",
+				"     remove_null = count(customer_id)) ~> aggregate2",
+				"aggregate2 select(mapColumn(",
+				"          first_name,",
+				"          last_name,",
+				"          customer_id,",
+				"          address,",
+				"          city,",
+				"          state,",
+				"          zip",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select2",
+				"select2 split(!isNull(first_name) && trim(first_name) != ''  &&!isNull(last_name) && trim(last_name) != ''  &&!isNull(customer_id) && trim(toString(customer_id)) != ''  &&!isNull(address) && trim(address) != '' &&!isNull(city) && trim(city) != '' &&!isNull(state) && trim(state) != '' &&!isNull(zip) && trim(zip) != '',",
+				"     isNull(trim(first_name)) || trim(first_name) == '' || isNull(trim(last_name)) || trim(last_name) == '' || isNull(customer_id) || trim(toString(customer_id)) == '' || isNull(trim(address)) || trim(address) == '' || isNull(trim(city)) || trim(city) == '' || isNull(trim(state)) || trim(state) == '' || isNull(trim(zip)) || trim(zip) == '',",
+				"     disjoint: false) ~> split1@(cleanrecord, dirtyrecords)",
+				"split1@cleanrecord sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          first_name,",
+				"          last_name,",
+				"          customer_id,",
+				"          address,",
+				"          city,",
+				"          state,",
+				"          zip",
+				"     )) ~> customerCleaned",
+				"split1@dirtyrecords sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delimited',",
+				"     fileSystem: 'project1',",
+				"     folderPath: 'reject',",
+				"     columnDelimiter: ',',",
+				"     escapeChar: '\\\\',",
+				"     quoteChar: '\\\"',",
+				"     columnNamesAsHeader: true,",
+				"     partitionFileNames:['customers.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink1"
+			]
+		}
+	}
+}

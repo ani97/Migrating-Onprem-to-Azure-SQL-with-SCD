@@ -1,0 +1,9 @@
+{
+	"name": "df-ncpl-bootcamp",
+	"location": "centralus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "b55588b8-9f09-43ff-8eab-30c74e0d99ac",
+		"tenantId": "b763d255-e286-4056-bae2-d0aea4505d5c"
+	}
+}

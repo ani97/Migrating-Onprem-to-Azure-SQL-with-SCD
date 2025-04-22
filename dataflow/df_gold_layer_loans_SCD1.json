@@ -1,0 +1,177 @@
+{
+	"name": "df_gold_layer_loans_SCD1",
+	"properties": {
+		"folder": {
+			"name": "Gold"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "loansgold",
+						"type": "DatasetReference"
+					},
+					"name": "loanstransformation"
+				},
+				{
+					"dataset": {
+						"referenceName": "loans_gold",
+						"type": "DatasetReference"
+					},
+					"name": "loanssql"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "loans_gold",
+						"type": "DatasetReference"
+					},
+					"name": "sink7"
+				},
+				{
+					"dataset": {
+						"referenceName": "loans_gold",
+						"type": "DatasetReference"
+					},
+					"name": "sink8"
+				}
+			],
+			"transformations": [
+				{
+					"name": "select4"
+				},
+				{
+					"name": "hashkeyloans"
+				},
+				{
+					"name": "lookup4"
+				},
+				{
+					"name": "split4"
+				},
+				{
+					"name": "derivedColumn6"
+				},
+				{
+					"name": "derivedColumn7"
+				},
+				{
+					"name": "alterRow4"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          loan_id as short,",
+				"          customer_id as short,",
+				"          loan_amount as double,",
+				"          interest_rate as double,",
+				"          loan_term as short",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     purgeFiles: true,",
+				"     wildcardPaths:['silver/loans/*.csv']) ~> loanstransformation",
+				"source(output(",
+				"          loan_id as integer,",
+				"          hashkey as long",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     query: 'Select loan_id,hashkey from loans',",
+				"     format: 'query') ~> loanssql",
+				"loanstransformation select(mapColumn(",
+				"          each(match(1==1),",
+				"               concat('src_',$$) = $$)",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select4",
+				"select4 derive(src_hashkey = crc32(concatWS('|', toString(src_loan_id),toString(src_customer_id),toString(src_loan_amount),toString(src_interest_rate),toString(src_loan_term)))) ~> hashkeyloans",
+				"hashkeyloans, loanssql lookup(src_loan_id == loan_id,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookup4",
+				"lookup4 split(isNull(loan_id),",
+				"     src_loan_id==loan_id&&src_hashkey!=hashkey,",
+				"     disjoint: false) ~> split4@(insertloans, updateloans)",
+				"split4@insertloans derive(src_createdby = 'Pipeline',",
+				"          src_createddate = currentTimestamp(),",
+				"          src_updatedby = 'Pipeline',",
+				"          src_updateddate = currentTimestamp()) ~> derivedColumn6",
+				"split4@updateloans derive(src_updatedby = 'Pipeline-updated',",
+				"          src_updateddate = currentTimestamp()) ~> derivedColumn7",
+				"derivedColumn7 alterRow(updateIf(1==1)) ~> alterRow4",
+				"derivedColumn6 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          loan_id as integer,",
+				"          customer_id as integer,",
+				"          loan_amount as double,",
+				"          interest_rate as double,",
+				"          loan_term as integer,",
+				"          hashkey as long,",
+				"          createdby as string,",
+				"          createddate as timestamp,",
+				"          updatedby as string,",
+				"          updateddate as timestamp",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          loan_id = src_loan_id,",
+				"          customer_id = src_customer_id,",
+				"          loan_amount = src_loan_amount,",
+				"          interest_rate = src_interest_rate,",
+				"          loan_term = src_loan_term,",
+				"          hashkey = src_hashkey,",
+				"          createdby = src_createdby,",
+				"          createddate = src_createddate,",
+				"          updatedby = src_updatedby,",
+				"          updateddate = src_updateddate",
+				"     )) ~> sink7",
+				"alterRow4 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          loan_id as integer,",
+				"          customer_id as integer,",
+				"          loan_amount as double,",
+				"          interest_rate as double,",
+				"          loan_term as integer,",
+				"          hashkey as long,",
+				"          createdby as string,",
+				"          createddate as timestamp,",
+				"          updatedby as string,",
+				"          updateddate as timestamp",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['loan_id'],",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          loan_id = src_loan_id,",
+				"          customer_id = src_customer_id,",
+				"          loan_amount = src_loan_amount,",
+				"          interest_rate = src_interest_rate,",
+				"          loan_term = src_loan_term,",
+				"          hashkey = src_hashkey,",
+				"          updatedby = src_updatedby,",
+				"          updateddate = src_updateddate",
+				"     )) ~> sink8"
+			]
+		}
+	}
+}

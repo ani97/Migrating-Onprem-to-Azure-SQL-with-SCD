@@ -1,0 +1,38 @@
+{
+	"name": "Json1",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_get_on_prem_data",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "FileServerLocation",
+				"fileName": "Metadata-onprem.json"
+			}
+		},
+		"schema": {
+			"type": "object",
+			"properties": {
+				"accounts": {
+					"type": "string"
+				},
+				"customers": {
+					"type": "string"
+				},
+				"loan_payments": {
+					"type": "string"
+				},
+				"loans": {
+					"type": "string"
+				},
+				"transactions": {
+					"type": "string"
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

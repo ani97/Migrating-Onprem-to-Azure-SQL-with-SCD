@@ -1,0 +1,183 @@
+{
+	"name": "df_gold_layer_transactions_SCD2",
+	"properties": {
+		"folder": {
+			"name": "Gold"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "transaction_transform",
+						"type": "DatasetReference"
+					},
+					"name": "transactiontransformation"
+				},
+				{
+					"dataset": {
+						"referenceName": "transactions_gold",
+						"type": "DatasetReference"
+					},
+					"name": "transactionssql"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "transactions_gold",
+						"type": "DatasetReference"
+					},
+					"name": "sink9"
+				},
+				{
+					"dataset": {
+						"referenceName": "transactions_gold",
+						"type": "DatasetReference"
+					},
+					"name": "sink10"
+				}
+			],
+			"transformations": [
+				{
+					"name": "select5"
+				},
+				{
+					"name": "hashkey"
+				},
+				{
+					"name": "lookup5"
+				},
+				{
+					"name": "split5"
+				},
+				{
+					"name": "derivedColumn8"
+				},
+				{
+					"name": "alterRow5"
+				},
+				{
+					"name": "union3"
+				},
+				{
+					"name": "derivedColumn9"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          transaction_id as short,",
+				"          account_id as short,",
+				"          transaction_date as date,",
+				"          transaction_amount as double,",
+				"          transaction_type as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     purgeFiles: true,",
+				"     wildcardPaths:['silver/transactions/*.csv']) ~> transactiontransformation",
+				"source(output(",
+				"          transaction_id as integer,",
+				"          hashkey as long",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     query: 'Select transaction_id,hashkey from transactions where isActive=1',",
+				"     format: 'query') ~> transactionssql",
+				"transactiontransformation select(mapColumn(",
+				"          each(match(1==1),",
+				"               concat('src_',$$) = $$)",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select5",
+				"select5 derive(src_hashkey = crc32(concatWS('|', toString(src_transaction_id),toString(src_account_id),toString(src_transaction_date),toString(src_transaction_amount),src_transaction_type))) ~> hashkey",
+				"hashkey, transactionssql lookup(src_transaction_id == transaction_id,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookup5",
+				"lookup5 split(isNull(transaction_id),",
+				"     src_transaction_id==transaction_id&&src_hashkey!=hashkey,",
+				"     disjoint: false) ~> split5@(inserttransactions, updatetransactions)",
+				"split5@updatetransactions derive(src_updatedby = 'Pipeline-updated',",
+				"          src_updateddate = currentTimestamp(),",
+				"          src_isActive = 0) ~> derivedColumn8",
+				"derivedColumn8 alterRow(updateIf(1==1)) ~> alterRow5",
+				"split5@inserttransactions, split5@updatetransactions union(byName: true)~> union3",
+				"union3 derive(src_updatedby = 'Pipeline',",
+				"          src_updateddate = currentTimestamp(),",
+				"          src_createdby = 'Pipeline',",
+				"          src_createddate = currentTimestamp(),",
+				"          src_isActive = 1) ~> derivedColumn9",
+				"alterRow5 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          transaction_id as integer,",
+				"          account_id as integer,",
+				"          transaction_date as date,",
+				"          transaction_amount as double,",
+				"          transaction_type as string,",
+				"          hashkey as long,",
+				"          createdby as string,",
+				"          createddate as timestamp,",
+				"          updatedby as string,",
+				"          updateddate as timestamp,",
+				"          isActive as integer",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['transaction_id','hashkey'],",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          transaction_id,",
+				"          hashkey,",
+				"          updatedby = src_updatedby,",
+				"          updateddate = src_updateddate,",
+				"          isActive = src_isActive",
+				"     )) ~> sink9",
+				"derivedColumn9 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          transaction_id as integer,",
+				"          account_id as integer,",
+				"          transaction_date as date,",
+				"          transaction_amount as double,",
+				"          transaction_type as string,",
+				"          hashkey as long,",
+				"          createdby as string,",
+				"          createddate as timestamp,",
+				"          updatedby as string,",
+				"          updateddate as timestamp,",
+				"          isActive as integer",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          transaction_id = src_transaction_id,",
+				"          account_id = src_account_id,",
+				"          transaction_date = src_transaction_date,",
+				"          transaction_amount = src_transaction_amount,",
+				"          transaction_type = src_transaction_type,",
+				"          hashkey = src_hashkey,",
+				"          createdby = src_createdby,",
+				"          createddate = src_createddate,",
+				"          updatedby = src_updatedby,",
+				"          updateddate = src_updateddate,",
+				"          isActive = src_isActive",
+				"     )) ~> sink10"
+			]
+		}
+	}
+}

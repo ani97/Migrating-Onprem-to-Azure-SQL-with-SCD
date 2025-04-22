@@ -1,0 +1,41 @@
+{
+	"name": "loanpayment",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorage1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "silver/loan_payments",
+				"fileSystem": "project1"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "payment_id",
+				"type": "String"
+			},
+			{
+				"name": "loan_id",
+				"type": "String"
+			},
+			{
+				"name": "payment_date",
+				"type": "String"
+			},
+			{
+				"name": "payment_amount",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

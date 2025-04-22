@@ -1,0 +1,68 @@
+{
+	"name": "loans_gold",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "loan_id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "customer_id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "loan_amount",
+				"type": "float",
+				"precision": 15
+			},
+			{
+				"name": "interest_rate",
+				"type": "float",
+				"precision": 15
+			},
+			{
+				"name": "loan_term",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "hashkey",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "createdby",
+				"type": "varchar"
+			},
+			{
+				"name": "createddate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "updatedby",
+				"type": "varchar"
+			},
+			{
+				"name": "updateddate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "loans"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
