@@ -29,12 +29,14 @@ This project implements a **hybrid data pipeline** to ingest, transform, and ana
 
 ## 📂 Folder Structure (Medallion Architecture)
 
+```
 project1/
 ├── bronze/         # Raw data from on-prem
 ├── silver/         # Cleaned and deduplicated data
 ├── gold/           # Business-ready data in SQL DB
 ├── backup/         # Backup of processed files
 └── reject/         # Dirty records (nulls/invalid)
+```
 
 
 ---
